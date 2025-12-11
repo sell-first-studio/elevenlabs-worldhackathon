@@ -29,7 +29,7 @@ export function Hero() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
           <Link href="/sign-up">
             <Button size="lg" className="bg-blue-600 hover:bg-blue-700 h-12 px-8 text-base">
-              Start Free Trial
+              Get Started
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
