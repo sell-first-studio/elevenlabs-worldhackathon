@@ -1,9 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DashboardHeader } from "@/components/dashboard";
-import { mockCampaigns } from "@/lib/mock-data";
+import { useCampaigns } from "@/contexts/campaign-context";
 import { Plus, Calendar, Users, TrendingUp } from "lucide-react";
 
 function getStatusColor(status: string) {
@@ -20,6 +22,8 @@ function getStatusColor(status: string) {
 }
 
 export default function CampaignsPage() {
+  const { campaigns } = useCampaigns();
+
   return (
     <div className="min-h-screen">
       <DashboardHeader
@@ -37,7 +41,7 @@ export default function CampaignsPage() {
 
       <main className="p-8">
         <div className="grid gap-4">
-          {mockCampaigns.map((campaign) => (
+          {campaigns.map((campaign) => (
             <Link key={campaign.id} href={`/dashboard/campaigns/${campaign.id}`}>
               <Card className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
                 <CardContent className="p-6">

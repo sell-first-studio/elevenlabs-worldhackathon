@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "PhishGuard - Enterprise Voice Phishing Simulation",
+  title: "VishGuard - Enterprise Voice Phishing Simulation",
   description: "Secure your organization against voice phishing with simulation-based penetration testing and training.",
 };
 

@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/dashboard";
+import { CampaignProvider } from "@/contexts/campaign-context";
 
 export default function DashboardLayout({
   children,
@@ -6,11 +7,13 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <div className="pl-64">
-        {children}
+    <CampaignProvider>
+      <div className="min-h-screen bg-gray-50">
+        <Sidebar />
+        <div className="pl-64">
+          {children}
+        </div>
       </div>
-    </div>
+    </CampaignProvider>
   );
 }

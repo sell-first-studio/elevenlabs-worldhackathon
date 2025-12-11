@@ -344,3 +344,212 @@ export function getDNDStats() {
     },
   };
 }
+
+// ============================================
+// HR Database Integration Mock Data
+// ============================================
+
+export interface DepartmentHierarchy {
+  id: string;
+  name: string;
+  employeeCount: number;
+  children?: DepartmentHierarchy[];
+  isRestricted?: boolean;
+}
+
+export interface HRDatabaseInfo {
+  provider: string;
+  lastSynced: Date;
+  totalEmployees: number;
+  totalDepartments: number;
+  totalLocations: number;
+}
+
+export interface UserPermissions {
+  role: string;
+  accessibleDepartmentIds: string[];
+  restrictedDepartmentIds: string[];
+  canTargetAll: boolean;
+}
+
+// Mock HR database connection info
+export const mockHRDatabase: HRDatabaseInfo = {
+  provider: 'BambooHR',
+  lastSynced: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+  totalEmployees: 1247,
+  totalDepartments: 12,
+  totalLocations: 5,
+};
+
+// Mock department hierarchy with nested teams
+export const mockDepartmentHierarchy: DepartmentHierarchy[] = [
+  {
+    id: 'dept-eng',
+    name: 'Engineering',
+    employeeCount: 142,
+    children: [
+      { id: 'dept-eng-fe', name: 'Frontend', employeeCount: 38 },
+      { id: 'dept-eng-be', name: 'Backend', employeeCount: 54 },
+      { id: 'dept-eng-devops', name: 'DevOps', employeeCount: 28 },
+      { id: 'dept-eng-qa', name: 'QA', employeeCount: 22 },
+    ],
+  },
+  {
+    id: 'dept-sales',
+    name: 'Sales',
+    employeeCount: 89,
+    children: [
+      { id: 'dept-sales-ent', name: 'Enterprise', employeeCount: 34 },
+      { id: 'dept-sales-smb', name: 'SMB', employeeCount: 31 },
+      { id: 'dept-sales-sdr', name: 'SDR', employeeCount: 24 },
+    ],
+  },
+  {
+    id: 'dept-marketing',
+    name: 'Marketing',
+    employeeCount: 45,
+    children: [
+      { id: 'dept-marketing-content', name: 'Content', employeeCount: 18 },
+      { id: 'dept-marketing-growth', name: 'Growth', employeeCount: 15 },
+      { id: 'dept-marketing-brand', name: 'Brand', employeeCount: 12 },
+    ],
+  },
+  {
+    id: 'dept-cs',
+    name: 'Customer Success',
+    employeeCount: 67,
+    children: [
+      { id: 'dept-cs-support', name: 'Support', employeeCount: 35 },
+      { id: 'dept-cs-onboarding', name: 'Onboarding', employeeCount: 18 },
+      { id: 'dept-cs-tam', name: 'TAM', employeeCount: 14 },
+    ],
+  },
+  {
+    id: 'dept-finance',
+    name: 'Finance',
+    employeeCount: 32,
+  },
+  {
+    id: 'dept-hr',
+    name: 'HR & People',
+    employeeCount: 28,
+    isRestricted: true,
+  },
+  {
+    id: 'dept-legal',
+    name: 'Legal',
+    employeeCount: 15,
+    isRestricted: true,
+  },
+  {
+    id: 'dept-exec',
+    name: 'Executive',
+    employeeCount: 12,
+    isRestricted: true,
+  },
+];
+
+// Mock user permissions (current user is a Security Team Member)
+export const mockUserPermissions: UserPermissions = {
+  role: 'Security Team Member',
+  accessibleDepartmentIds: [
+    'dept-eng', 'dept-eng-fe', 'dept-eng-be', 'dept-eng-devops', 'dept-eng-qa',
+    'dept-sales', 'dept-sales-ent', 'dept-sales-smb', 'dept-sales-sdr',
+    'dept-marketing', 'dept-marketing-content', 'dept-marketing-growth', 'dept-marketing-brand',
+    'dept-cs', 'dept-cs-support', 'dept-cs-onboarding', 'dept-cs-tam',
+    'dept-finance',
+  ],
+  restrictedDepartmentIds: ['dept-hr', 'dept-legal', 'dept-exec'],
+  canTargetAll: false,
+};
+
+// Helper to get total accessible employee count
+export function getAccessibleEmployeeCount(): number {
+  const accessibleIds = new Set(mockUserPermissions.accessibleDepartmentIds);
+  let count = 0;
+
+  function countDept(dept: DepartmentHierarchy) {
+    if (accessibleIds.has(dept.id)) {
+      // If parent is accessible, count it (children are included in parent count for top-level)
+      if (!dept.children) {
+        count += dept.employeeCount;
+      } else {
+        // For parents with children, only count if no children are individually accessible
+        const hasAccessibleChildren = dept.children.some(c => accessibleIds.has(c.id));
+        if (!hasAccessibleChildren) {
+          count += dept.employeeCount;
+        } else {
+          dept.children.forEach(countDept);
+        }
+      }
+    }
+  }
+
+  mockDepartmentHierarchy.forEach(countDept);
+  return count;
+}
+
+// Generate mock employees for selected departments
+export function getEmployeesForDepartments(departmentIds: string[]): Employee[] {
+  const deptIdSet = new Set(departmentIds);
+  const result: Employee[] = [];
+
+  // Map department IDs to department names
+  const deptIdToName: Record<string, string> = {};
+  function mapDepts(depts: DepartmentHierarchy[]) {
+    depts.forEach(d => {
+      deptIdToName[d.id] = d.name;
+      if (d.children) mapDepts(d.children);
+    });
+  }
+  mapDepts(mockDepartmentHierarchy);
+
+  // Generate mock employees for each selected department
+  let empIndex = 0;
+  departmentIds.forEach(deptId => {
+    const deptName = deptIdToName[deptId];
+    if (!deptName) return;
+
+    // Find department to get employee count
+    let empCount = 0;
+    function findDept(depts: DepartmentHierarchy[]): DepartmentHierarchy | null {
+      for (const d of depts) {
+        if (d.id === deptId) return d;
+        if (d.children) {
+          const found = findDept(d.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+    const dept = findDept(mockDepartmentHierarchy);
+    if (dept) {
+      // For parent departments with children, don't double count
+      if (dept.children && dept.children.some(c => deptIdSet.has(c.id))) {
+        return; // Skip parent if children are selected
+      }
+      empCount = dept.employeeCount;
+    }
+
+    // Generate employees
+    for (let i = 0; i < empCount; i++) {
+      const firstName = ['John', 'Sarah', 'Michael', 'Emily', 'David', 'Jessica', 'Robert', 'Amanda', 'Chris', 'Jennifer'][empIndex % 10];
+      const lastName = ['Smith', 'Johnson', 'Chen', 'Davis', 'Wilson', 'Brown', 'Taylor', 'Martinez', 'Lee', 'Garcia'][Math.floor(empIndex / 10) % 10];
+      const name = `${firstName} ${lastName}`;
+
+      result.push({
+        id: `gen-emp-${empIndex}`,
+        name,
+        maskedName: maskName(name),
+        phone: `+1${Math.floor(Math.random() * 9000000000 + 1000000000)}`,
+        email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@company.com`,
+        department: deptName,
+        status: 'pending',
+        hireDate: new Date(Date.now() - Math.floor(Math.random() * 700 + 30) * 24 * 60 * 60 * 1000),
+      });
+      empIndex++;
+    }
+  });
+
+  return result;
+}

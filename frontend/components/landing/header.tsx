@@ -10,7 +10,7 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <Shield className="h-8 w-8 text-blue-600" />
-          <span className="text-xl font-semibold text-gray-900">PhishGuard</span>
+          <span className="text-xl font-semibold text-gray-900">VishGuard</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-8">

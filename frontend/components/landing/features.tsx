@@ -22,7 +22,7 @@ const features = [
   {
     icon: Heart,
     title: "Emotionally Intelligent Training",
-    description: "Strengthen your team without shaming. Our approach focuses on education and improvement, not punishment."
+    description: "Strengthen your team without shaming. Our approach focuses on education, positive reinforcement, and improvement—not punishment."
   }
 ];
 

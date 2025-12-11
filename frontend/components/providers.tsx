@@ -11,7 +11,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ClerkProvider publishableKey={publishableKey}>
+    <ClerkProvider
+      publishableKey={publishableKey}
+      afterSignInUrl="/org-selection"
+      afterSignUpUrl="/org-selection"
+    >
       {children}
     </ClerkProvider>
   );

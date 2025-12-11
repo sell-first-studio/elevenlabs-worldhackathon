@@ -11,7 +11,7 @@ export function Footer() {
           <div>
             <Link href="/" className="flex items-center gap-2 mb-4">
               <Shield className="h-6 w-6 text-blue-600" />
-              <span className="text-lg font-semibold text-gray-900">PhishGuard</span>
+              <span className="text-lg font-semibold text-gray-900">VishGuard</span>
             </Link>
             <p className="text-sm text-gray-600">
               Enterprise voice phishing simulation and training platform.
@@ -51,7 +51,7 @@ export function Footer() {
 
         <div className="pt-8 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-gray-600">
-            &copy; {new Date().getFullYear()} PhishGuard. All rights reserved.
+            &copy; {new Date().getFullYear()} VishGuard. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <Link href="#" className="text-sm text-gray-600 hover:text-gray-900">Twitter</Link>

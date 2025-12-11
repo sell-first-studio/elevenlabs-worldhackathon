@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import { DashboardHeader } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +39,11 @@ import {
   CreditCard,
   Sparkles,
   Package,
-  Send
+  Send,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Search
 } from "lucide-react";
 
 function getCategoryIcon(category: Reward['category']) {
@@ -47,11 +59,20 @@ function getCategoryIcon(category: Reward['category']) {
   }
 }
 
+type SortKey = 'name' | 'department' | 'achievement';
+type SortDirection = 'asc' | 'desc';
+
 export default function RewardsPage() {
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  // Filter and sort state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [achievementFilter, setAchievementFilter] = useState<string>("all");
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
   // Get employees who passed or completed training
   const eligibleEmployees = mockCampaigns.flatMap(campaign =>
@@ -59,6 +80,92 @@ export default function RewardsPage() {
       e.result === 'passed' || e.trainingStatus === 'completed'
     )
   );
+
+  // Get unique departments for filter dropdown
+  const departments = useMemo(() => {
+    const depts = [...new Set(eligibleEmployees.map(e => e.department))];
+    return depts.sort();
+  }, [eligibleEmployees]);
+
+  // Filter and sort employees
+  const filteredEmployees = useMemo(() => {
+    let result = eligibleEmployees;
+
+    // Apply search filter
+    if (searchQuery) {
+      result = result.filter(e =>
+        e.maskedName.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply department filter
+    if (departmentFilter !== "all") {
+      result = result.filter(e => e.department === departmentFilter);
+    }
+
+    // Apply achievement filter
+    if (achievementFilter !== "all") {
+      result = result.filter(e => {
+        if (achievementFilter === "passed") return e.result === 'passed';
+        if (achievementFilter === "training") return e.trainingStatus === 'completed' && e.result !== 'passed';
+        return true;
+      });
+    }
+
+    // Apply sorting
+    if (sortConfig) {
+      result = [...result].sort((a, b) => {
+        let aValue: string;
+        let bValue: string;
+
+        switch (sortConfig.key) {
+          case 'name':
+            aValue = a.maskedName;
+            bValue = b.maskedName;
+            break;
+          case 'department':
+            aValue = a.department;
+            bValue = b.department;
+            break;
+          case 'achievement':
+            aValue = a.result === 'passed' ? 'Passed Test' : 'Completed Training';
+            bValue = b.result === 'passed' ? 'Passed Test' : 'Completed Training';
+            break;
+          default:
+            return 0;
+        }
+
+        if (sortConfig.direction === 'asc') {
+          return aValue.localeCompare(bValue);
+        } else {
+          return bValue.localeCompare(aValue);
+        }
+      });
+    }
+
+    return result;
+  }, [eligibleEmployees, searchQuery, departmentFilter, achievementFilter, sortConfig]);
+
+  const handleSort = (key: SortKey) => {
+    setSortConfig(current => {
+      if (current?.key === key) {
+        if (current.direction === 'asc') {
+          return { key, direction: 'desc' };
+        }
+        return null; // Remove sort on third click
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const getSortIcon = (key: SortKey) => {
+    if (sortConfig?.key !== key) {
+      return <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />;
+    }
+    return sortConfig.direction === 'asc'
+      ? <ArrowUp className="ml-1 h-4 w-4 text-gray-700" />
+      : <ArrowDown className="ml-1 h-4 w-4 text-gray-700" />;
+  };
 
   const handleSelectEmployee = (employeeId: string, checked: boolean) => {
     if (checked) {
@@ -70,7 +177,7 @@ export default function RewardsPage() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedEmployees(eligibleEmployees.map(e => e.id));
+      setSelectedEmployees(filteredEmployees.map(e => e.id));
     } else {
       setSelectedEmployees([]);
     }
@@ -178,7 +285,7 @@ export default function RewardsPage() {
               <div>
                 <CardTitle className="text-lg">Eligible Recipients</CardTitle>
                 <CardDescription>
-                  {eligibleEmployees.length} employees passed the security test or completed training
+                  {filteredEmployees.length} of {eligibleEmployees.length} employees shown
                 </CardDescription>
               </div>
               <div className="flex items-center gap-4">
@@ -190,43 +297,109 @@ export default function RewardsPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search by employee name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={achievementFilter} onValueChange={setAchievementFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Achievement" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Achievements</SelectItem>
+                  <SelectItem value="passed">Passed Test</SelectItem>
+                  <SelectItem value="training">Completed Training</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
                     <Checkbox
-                      checked={selectedEmployees.length === eligibleEmployees.length && eligibleEmployees.length > 0}
+                      checked={filteredEmployees.length > 0 && filteredEmployees.every(e => selectedEmployees.includes(e.id))}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Achievement</TableHead>
+                  <TableHead>
+                    <button
+                      className="flex items-center hover:text-gray-900"
+                      onClick={() => handleSort('name')}
+                    >
+                      Employee
+                      {getSortIcon('name')}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      className="flex items-center hover:text-gray-900"
+                      onClick={() => handleSort('department')}
+                    >
+                      Department
+                      {getSortIcon('department')}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      className="flex items-center hover:text-gray-900"
+                      onClick={() => handleSort('achievement')}
+                    >
+                      Achievement
+                      {getSortIcon('achievement')}
+                    </button>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {eligibleEmployees.map((employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedEmployees.includes(employee.id)}
-                        onCheckedChange={(checked) =>
-                          handleSelectEmployee(employee.id, checked === true)
-                        }
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{employee.maskedName}</TableCell>
-                    <TableCell>{employee.department}</TableCell>
-                    <TableCell>
-                      {employee.result === 'passed' ? (
-                        <Badge className="bg-green-100 text-green-700">Passed Test</Badge>
-                      ) : (
-                        <Badge className="bg-blue-100 text-blue-700">Completed Training</Badge>
-                      )}
+                {filteredEmployees.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                      No employees match the current filters
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredEmployees.map((employee) => (
+                    <TableRow key={employee.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedEmployees.includes(employee.id)}
+                          onCheckedChange={(checked) =>
+                            handleSelectEmployee(employee.id, checked === true)
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{employee.maskedName}</TableCell>
+                      <TableCell>{employee.department}</TableCell>
+                      <TableCell>
+                        {employee.result === 'passed' ? (
+                          <Badge className="bg-green-100 text-green-700">Passed Test</Badge>
+                        ) : (
+                          <Badge className="bg-blue-100 text-blue-700">Completed Training</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>

@@ -35,7 +35,7 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gray-50">
       <DashboardHeader
         title="Settings"
-        description="Configure organization-wide settings for PhishGuard"
+        description="Configure organization-wide settings for VishGuard"
       />
 
       <main className="p-8 space-y-6">
