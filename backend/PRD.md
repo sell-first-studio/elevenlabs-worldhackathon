@@ -17,11 +17,14 @@ How it works in practice:
   - We will use Livekit with Elevenlabs to build the voice AI agent.
   - Use Elevenlabs for the STT and TTS. For the LLM node in Livekit use Groq.
   - The IT support agent should be aggressive and push the user to expose the OTP code with time pressure as an excuse.
-- After the call, we will analyze the transcript to see if the user exposes the OTP code. We will use Blackbox API to use the claude Sonnet 4.5 model to analyze the transcript with structured output; regarding feedback and the success or failure of the attack.
+- After the call, we will analyze the transcript to see if the user exposes the OTP code. We will use Blackbox API to use the claude Sonnet 4.5 model to analyze the transcript with structured output; regarding feedback and the success or failure of the attack. https://docs.blackbox.ai/api-reference/chat
 
 Do not implement any database for the project just use the file system.
 
 There are sub-agents: 
-twilio-specialist
 elevenlabs-specialist.
 livekit-docs-specialist
+
+For the Twilio I want you to tell me what I need to get. 
+
+We will be doing this project to the backend folder.
