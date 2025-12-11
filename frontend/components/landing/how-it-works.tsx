@@ -18,7 +18,7 @@ const steps = [
   {
     icon: BarChart3,
     step: "03",
-    title: "Track & Train",
+    title: "Track, Train, & Reward",
     description: "Monitor real-time results, identify vulnerable employees, and assign targeted training. Reward those who pass with gifts."
   }
 ];
