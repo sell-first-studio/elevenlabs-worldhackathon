@@ -16,6 +16,7 @@ dependencies = [
 
 [project.scripts]
 vishing = "vishing.cli:main"
+vishing-worker = "vishing.worker:main"
 
 [build-system]
 requires = ["hatchling"]

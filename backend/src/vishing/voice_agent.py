@@ -85,80 +85,80 @@ class ITSupportAgent(Agent):
         self._call_session.call_started = datetime.now().isoformat()
 
 
-def create_entrypoint(config: Config):
-    """Create an entrypoint function for the voice agent worker.
+async def entrypoint(ctx: JobContext):
+    """Entrypoint for the voice agent worker.
 
-    The worker runs persistently and receives call context via dispatch metadata.
+    This is called when the agent is dispatched to a room.
+    Config is loaded at runtime to avoid pickle issues with closures.
     """
+    from .config import load_config
 
-    async def entrypoint(ctx: JobContext):
-        await ctx.connect()
+    config = load_config()
+    await ctx.connect()
 
-        # Get target info from dispatch metadata
-        metadata = json.loads(ctx.job.metadata or "{}")
-        target_name = metadata.get("target_name", "Unknown")
-        target_phone = metadata.get("target_phone", "")
+    # Get target info from dispatch metadata
+    metadata = json.loads(ctx.job.metadata or "{}")
+    target_name = metadata.get("target_name", "Unknown")
+    target_phone = metadata.get("target_phone", "")
 
-        # Create call session from dispatch metadata
-        call_session = CallSession(
-            target_name=target_name,
-            target_phone=target_phone,
-            room_name=ctx.room.name,
-        )
+    # Create call session from dispatch metadata
+    call_session = CallSession(
+        target_name=target_name,
+        target_phone=target_phone,
+        room_name=ctx.room.name,
+    )
 
-        session = AgentSession(
-            allow_interruptions=True,
-            min_endpointing_delay=0.5,
-        )
+    session = AgentSession(
+        allow_interruptions=True,
+        min_endpointing_delay=0.5,
+    )
 
-        agent = ITSupportAgent(
-            target_name=target_name,
-            config=config,
-            call_session=call_session,
-        )
+    agent = ITSupportAgent(
+        target_name=target_name,
+        config=config,
+        call_session=call_session,
+    )
 
-        # Capture transcript via events
-        @session.on("user_input_transcribed")
-        def on_user_transcript(ev):
-            if ev.is_final:
+    # Capture transcript via events
+    @session.on("user_input_transcribed")
+    def on_user_transcript(ev):
+        if ev.is_final:
+            call_session.transcript.append(TranscriptMessage(
+                role="user",
+                content=ev.transcript,
+                timestamp=datetime.now().isoformat()
+            ))
+
+    @session.on("conversation_item_added")
+    def on_conversation_item(ev):
+        item = ev.item
+        if hasattr(item, 'role') and item.role == "assistant":
+            content = ""
+            if hasattr(item, 'content'):
+                if isinstance(item.content, list):
+                    content = " ".join(str(c) for c in item.content)
+                else:
+                    content = str(item.content)
+            if content:
                 call_session.transcript.append(TranscriptMessage(
-                    role="user",
-                    content=ev.transcript,
+                    role="agent",
+                    content=content,
                     timestamp=datetime.now().isoformat()
                 ))
 
-        @session.on("conversation_item_added")
-        def on_conversation_item(ev):
-            item = ev.item
-            if hasattr(item, 'role') and item.role == "assistant":
-                content = ""
-                if hasattr(item, 'content'):
-                    if isinstance(item.content, list):
-                        content = " ".join(str(c) for c in item.content)
-                    else:
-                        content = str(item.content)
-                if content:
-                    call_session.transcript.append(TranscriptMessage(
-                        role="agent",
-                        content=content,
-                        timestamp=datetime.now().isoformat()
-                    ))
-
-        await session.start(
-            agent=agent,
-            room=ctx.room,
-        )
-
-    return entrypoint
+    await session.start(
+        agent=agent,
+        room=ctx.room,
+    )
 
 
-def create_worker_options(config: Config) -> WorkerOptions:
+def create_worker_options() -> WorkerOptions:
     """Create WorkerOptions for the voice agent worker.
 
     The worker runs persistently and handles dispatched calls.
     """
     return WorkerOptions(
-        entrypoint_fnc=create_entrypoint(config),
+        entrypoint_fnc=entrypoint,
         agent_name="vishing-agent",  # Must match dispatch request
     )
 

