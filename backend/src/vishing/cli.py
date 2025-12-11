@@ -1,5 +1,7 @@
 import argparse
 import asyncio
+import json
+import os
 import sys
 import time
 import uuid
@@ -7,7 +9,7 @@ from datetime import datetime
 
 from .config import load_config
 from .sms import SMSBombardment
-from .voice_agent import CallSession, make_outbound_call, save_transcript
+from .voice_agent import CallSession, TranscriptMessage, make_outbound_call, save_transcript
 from .analyzer import TranscriptAnalyzer, save_analysis
 
 
@@ -92,14 +94,25 @@ async def run_attack(phone: str, name: str, skip_sms: bool = False):
 
         session.call_ended = datetime.now().isoformat()
 
+        # Load transcript from worker-saved file
+        transcript_file = f"results/transcript_{session.room_name}.json"
+        if os.path.exists(transcript_file):
+            with open(transcript_file) as f:
+                data = json.load(f)
+                session.transcript = [
+                    TranscriptMessage(**m) for m in data.get("transcript", [])
+                ]
+            print_status(f"Transcript loaded: {transcript_file}")
+        else:
+            print_status("No transcript file found (worker may not have saved it yet)")
+
     except Exception as e:
         print_status(f"Error during call: {e}")
         return
 
-    # Save transcript
+    # Check transcript
     if session.transcript:
-        transcript_file = save_transcript(session)
-        print_status(f"Transcript saved: {transcript_file}")
+        print_status(f"Transcript contains {len(session.transcript)} messages")
     else:
         print_status("No transcript captured")
 

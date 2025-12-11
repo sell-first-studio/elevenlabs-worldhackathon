@@ -154,6 +154,11 @@ async def entrypoint(ctx: JobContext):
         room=ctx.room,
     )
 
+    # Session has ended (call completed) - save transcript for CLI to retrieve
+    call_session.call_ended = datetime.now().isoformat()
+    if call_session.transcript:
+        save_transcript(call_session)
+
 
 def create_worker_options() -> WorkerOptions:
     """Create WorkerOptions for the voice agent worker.
@@ -208,12 +213,15 @@ async def make_outbound_call(config: Config, session: CallSession) -> CallSessio
     return session
 
 
-def save_transcript(session: CallSession, output_dir: str = "results"):
-    """Save the call transcript to a file."""
+def save_transcript(session: CallSession, output_dir: str = "results") -> str:
+    """Save the call transcript to a file.
+
+    Uses room_name for predictable filename so CLI can retrieve it.
+    """
     os.makedirs(output_dir, exist_ok=True)
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{output_dir}/transcript_{timestamp}.json"
+    # Use room_name for predictable filename (CLI needs to find this file)
+    filename = f"{output_dir}/transcript_{session.room_name}.json"
 
     data = {
         "target_name": session.target_name,
