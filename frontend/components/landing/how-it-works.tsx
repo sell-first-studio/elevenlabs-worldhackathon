@@ -1,13 +1,13 @@
 "use client";
 
-import { Upload, Play, BarChart3 } from "lucide-react";
+import { ShieldCheck, Play, BarChart3 } from "lucide-react";
 
 const steps = [
   {
-    icon: Upload,
+    icon: ShieldCheck,
     step: "01",
-    title: "Upload Your Team",
-    description: "Import employee data via CSV with names and phone numbers. We'll validate the format and show you a preview before proceeding."
+    title: "Onboard Org Securely",
+    description: "Configure your organization with built-in consent verification. We ensure compliance and data privacy before launch."
   },
   {
     icon: Play,
@@ -18,7 +18,7 @@ const steps = [
   {
     icon: BarChart3,
     step: "03",
-    title: "Track & Train",
+    title: "Track, Train, & Reward",
     description: "Monitor real-time results, identify vulnerable employees, and assign targeted training. Reward those who pass with gifts."
   }
 ];

@@ -22,7 +22,7 @@ export function CTA() {
             </Button>
           </Link>
           <Link href="/sign-in">
-            <Button variant="outline" size="lg" className="h-12 px-8 text-base border-gray-700 text-white hover:bg-gray-800">
+            <Button variant="outline" size="lg" className="h-12 px-8 text-base border-white/30 bg-transparent text-white hover:bg-white/10">
               Sign In
             </Button>
           </Link>

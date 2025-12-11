@@ -21,8 +21,8 @@ const features = [
   },
   {
     icon: Heart,
-    title: "Emotionally Intelligent Training",
-    description: "Strengthen your team without shaming. Our approach focuses on education, positive reinforcement, and improvement—not punishment."
+    title: "Emotionally Intelligent Training & Positive Reinforcement",
+    description: "Strengthen your team without shaming. Our approach focuses on education, positive reinforcement through rewards, and improvement—not punishment."
   }
 ];
 
