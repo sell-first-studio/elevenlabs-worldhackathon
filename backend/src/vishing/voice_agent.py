@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from livekit import api
 from livekit.agents import JobContext, WorkerOptions, cli
 from livekit.agents.voice import Agent, AgentSession
-from livekit.plugins import elevenlabs, silero
+from livekit.plugins import elevenlabs, openai, silero
 
 from .config import Config
 
@@ -64,7 +64,10 @@ class ITSupportAgent(Agent):
         super().__init__(
             instructions=IT_SUPPORT_PROMPT.format(target_name=target_name),
             stt=elevenlabs.STT(api_key=config.eleven_api_key),
-            llm="google/gemini-2.0-flash",
+            llm=openai.LLM(
+                model="gpt-4o-mini",
+                api_key=config.openai_api_key,
+            ),
             tts=elevenlabs.TTS(
                 voice_id="21m00Tcm4TlvDq8ikWAM",  # Rachel - professional female voice
                 model="eleven_turbo_v2_5",
@@ -82,11 +85,26 @@ class ITSupportAgent(Agent):
         self._call_session.call_started = datetime.now().isoformat()
 
 
-def create_entrypoint(config: Config, call_session: CallSession):
-    """Create an entrypoint function for the voice agent worker."""
+def create_entrypoint(config: Config):
+    """Create an entrypoint function for the voice agent worker.
+
+    The worker runs persistently and receives call context via dispatch metadata.
+    """
 
     async def entrypoint(ctx: JobContext):
         await ctx.connect()
+
+        # Get target info from dispatch metadata
+        metadata = json.loads(ctx.job.metadata or "{}")
+        target_name = metadata.get("target_name", "Unknown")
+        target_phone = metadata.get("target_phone", "")
+
+        # Create call session from dispatch metadata
+        call_session = CallSession(
+            target_name=target_name,
+            target_phone=target_phone,
+            room_name=ctx.room.name,
+        )
 
         session = AgentSession(
             allow_interruptions=True,
@@ -94,7 +112,7 @@ def create_entrypoint(config: Config, call_session: CallSession):
         )
 
         agent = ITSupportAgent(
-            target_name=call_session.target_name,
+            target_name=target_name,
             config=config,
             call_session=call_session,
         )
@@ -134,10 +152,14 @@ def create_entrypoint(config: Config, call_session: CallSession):
     return entrypoint
 
 
-def create_worker_options(config: Config, call_session: CallSession) -> WorkerOptions:
-    """Create WorkerOptions for the voice agent."""
+def create_worker_options(config: Config) -> WorkerOptions:
+    """Create WorkerOptions for the voice agent worker.
+
+    The worker runs persistently and handles dispatched calls.
+    """
     return WorkerOptions(
-        entrypoint_fnc=create_entrypoint(config, call_session),
+        entrypoint_fnc=create_entrypoint(config),
+        agent_name="vishing-agent",  # Must match dispatch request
     )
 
 
@@ -150,12 +172,24 @@ async def make_outbound_call(config: Config, session: CallSession) -> CallSessio
         api_secret=config.livekit_api_secret,
     )
 
-    # Create a room for the call
+    # Step 1: Create a room for the call
     await lkapi.room.create_room(
         api.CreateRoomRequest(name=session.room_name)
     )
 
-    # Create SIP participant (initiates the phone call)
+    # Step 2: Dispatch agent to room (agent must be running with matching agent_name)
+    await lkapi.agent_dispatch.create_dispatch(
+        api.CreateAgentDispatchRequest(
+            agent_name="vishing-agent",
+            room=session.room_name,
+            metadata=json.dumps({
+                "target_name": session.target_name,
+                "target_phone": session.target_phone,
+            })
+        )
+    )
+
+    # Step 3: Create SIP participant (initiates the phone call)
     await lkapi.sip.create_sip_participant(
         api.CreateSIPParticipantRequest(
             sip_trunk_id=config.sip_trunk_id,
