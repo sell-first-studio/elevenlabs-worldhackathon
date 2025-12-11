@@ -25,6 +25,9 @@ class Config:
     # Blackbox
     blackbox_api_key: str
 
+    # OpenAI
+    openai_api_key: str
+
 
 def load_config() -> Config:
     return Config(
@@ -38,4 +41,5 @@ def load_config() -> Config:
         sip_trunk_id=os.environ["SIP_TRUNK_ID"],
         eleven_api_key=os.environ["ELEVEN_API_KEY"],
         blackbox_api_key=os.environ["BLACKBOX_API_KEY"],
+        openai_api_key=os.environ["OPENAI_API_KEY"],
     )
