@@ -1,8 +1,8 @@
 import asyncio
 import json
 import os
-from datetime import datetime
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from livekit import api
 from livekit.agents import JobContext, WorkerOptions, cli
@@ -10,7 +10,6 @@ from livekit.agents.voice import Agent, AgentSession
 from livekit.plugins import elevenlabs, openai, silero
 
 from .config import Config
-
 
 IT_SUPPORT_PROMPT = """You are calling from the IT security department. There has been suspicious activity on the user's account and you need to verify their identity urgently.
 
@@ -123,28 +122,32 @@ async def entrypoint(ctx: JobContext):
     @session.on("user_input_transcribed")
     def on_user_transcript(ev):
         if ev.is_final:
-            call_session.transcript.append(TranscriptMessage(
-                role="user",
-                content=ev.transcript,
-                timestamp=datetime.now().isoformat()
-            ))
+            call_session.transcript.append(
+                TranscriptMessage(
+                    role="user",
+                    content=ev.transcript,
+                    timestamp=datetime.now().isoformat(),
+                )
+            )
 
     @session.on("conversation_item_added")
     def on_conversation_item(ev):
         item = ev.item
-        if hasattr(item, 'role') and item.role == "assistant":
+        if hasattr(item, "role") and item.role == "assistant":
             content = ""
-            if hasattr(item, 'content'):
+            if hasattr(item, "content"):
                 if isinstance(item.content, list):
                     content = " ".join(str(c) for c in item.content)
                 else:
                     content = str(item.content)
             if content:
-                call_session.transcript.append(TranscriptMessage(
-                    role="agent",
-                    content=content,
-                    timestamp=datetime.now().isoformat()
-                ))
+                call_session.transcript.append(
+                    TranscriptMessage(
+                        role="agent",
+                        content=content,
+                        timestamp=datetime.now().isoformat(),
+                    )
+                )
 
     await session.start(
         agent=agent,
@@ -173,19 +176,19 @@ async def make_outbound_call(config: Config, session: CallSession) -> CallSessio
     )
 
     # Step 1: Create a room for the call
-    await lkapi.room.create_room(
-        api.CreateRoomRequest(name=session.room_name)
-    )
+    await lkapi.room.create_room(api.CreateRoomRequest(name=session.room_name))
 
     # Step 2: Dispatch agent to room (agent must be running with matching agent_name)
     await lkapi.agent_dispatch.create_dispatch(
         api.CreateAgentDispatchRequest(
             agent_name="vishing-agent",
             room=session.room_name,
-            metadata=json.dumps({
-                "target_name": session.target_name,
-                "target_phone": session.target_phone,
-            })
+            metadata=json.dumps(
+                {
+                    "target_name": session.target_name,
+                    "target_phone": session.target_phone,
+                }
+            ),
         )
     )
 
@@ -221,7 +224,7 @@ def save_transcript(session: CallSession, output_dir: str = "results"):
         "transcript": [
             {"role": m.role, "content": m.content, "timestamp": m.timestamp}
             for m in session.transcript
-        ]
+        ],
     }
 
     with open(filename, "w") as f:
